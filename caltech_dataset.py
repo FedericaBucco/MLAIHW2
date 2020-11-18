@@ -94,4 +94,4 @@ class Caltech(VisionDataset):
         It is mandatory, as this is used by several other components
         '''
         length = len(self.samples) # Provide a way to get the length (number of elements) of the dataset
-        return length
+        return 3
