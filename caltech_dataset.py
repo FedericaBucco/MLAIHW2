@@ -15,12 +15,23 @@ def pil_loader(path):
 
 
 class Caltech(VisionDataset):
+
+    def returnclasses(self):
+        return 3
+
     def __init__(self, root, split='train', transform=None, target_transform=None):
         super(Caltech, self).__init__(root, transform=transform, target_transform=target_transform)
 
         self.split = split # This defines the split you are going to use
                            # (split files are called 'train.txt' and 'test.txt')
+        
+        classes, class_to_idx = self._find_classes(self.root)
+        samples = make_dataset(self.root, class_to_idx, split)
+        self.targets = [s[1] for s in samples]
 
+        self.classes = classes
+        self.class_to_idx = class_to_idx
+        self.samples = samples
         '''
         - Here you should implement the logic for reading the splits files and accessing elements
         - If the RAM size allows it, it is faster to store all data in memory
@@ -29,31 +40,58 @@ class Caltech(VisionDataset):
           through the index
         - Labels should start from 0, so for Caltech you will have lables 0...100 (excluding the background class) 
         '''
+        
+    def _find_classes(self, dir: str) -> Tuple[List[str], Dict[str, int]]:
 
-    def __getitem__(self, index):
-        '''
-        __getitem__ should access an element through its index
+        """
+        Finds the class folders in a dataset.
+
         Args:
-            index (int): Index
+            dir (string): Root directory path.
 
         Returns:
-            tuple: (sample, target) where target is class_index of the target class.
-        '''
+            tuple: (classes, class_to_idx) where classes are relative to (dir), and class_to_idx is a dictionary.
 
-        image, label = ... # Provide a way to access image and label via index
-                           # Image should be a PIL Image
-                           # label can be int
+        Ensures:
+            No class is a subdirectory of another.
+        """
+        
+        classes = [d.name for d in os.scandir(dir) if d.is_dir() and d.name != "BACKGROUND_Google"]
+        classes.sort()
+        class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+        return classes, class_to_idx
 
-        # Applies preprocessing when accessing the image
-        if self.transform is not None:
-            image = self.transform(image)
 
-        return image, label
+    def __getitem__(self, index):
+      
+        img, target = self.samples[index]
+
+        return img, target
+    
+    def make_dataset(
+        directory: str,
+        class_to_idx: Dict[str, int],
+        splits) -> List[Tuple[str, int]]:
+        instances = list()
+        directory = os.path.expanduser(directory)
+        name = '{0}.txt'.format(splits)
+
+        with open(name, 'r') as f:
+          for line in f:
+            classname = line.split('/')[0]
+            img = pil_loader(line)
+            instances.append((img, class_to_idx.get(index)))
+
+
+
+
+
+        return instances
 
     def __len__(self):
         '''
         The __len__ method returns the length of the dataset
         It is mandatory, as this is used by several other components
         '''
-        length = ... # Provide a way to get the length (number of elements) of the dataset
+        length = len(self.samples) # Provide a way to get the length (number of elements) of the dataset
         return length
